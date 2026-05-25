@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#07090f">
+    <title>Rosary Companion</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- CSS Variables --- */
+        :root {
+            --bg-dark: #07090f;
+            --glass-surface: rgba(30, 35, 45, 0.4);
+            --glass-menu: rgba(15, 18, 25, 0.85);
+            --bg-overlay: rgba(0, 0, 0, 0.6);
+            --glass-blur: 16px;
+            --glass-border: 1px solid rgba(255, 255, 255, 0.12);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            
+            --text-primary: #f0f0f0;
+            --text-secondary: #a8b0ba;
+
+            --indicator-bar-height: 22px;
+            --header-height: 55px;
+            --footer-height: 60px;
+            --decade-tracker-height: 28px;
+            --menu-width: 280px;
+
+            --theme-color-glorious: #a6c09c;
+            --theme-color-joyful: #d99a9a;
+            --theme-color-luminous: #ebd08a;
+            --theme-color-sorrowful: #a994ba;
+            --theme-color-litany: #b0b0b0;
+            --current-accent-color: var(--theme-color-glorious);
+
+            --base-font-size: 1rem;
+            --prayer-font-size: var(--base-font-size);
+
+            --decade-dot-size: 9px;
+            --prayer-color-of: #a7c7e7;
+            --prayer-color-hm: #ffffff;
+            --prayer-color-gb: #ffd700;
+            --prayer-color-fp: #b19cd9;
+        }
+
+        /* Basic Reset & Custom Scrollbar for Desktop */
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        html { font-size: 16px; scroll-behavior: smooth; }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.25); }
+
+        /* App Shell Layout */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow: hidden;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Dynamic Theme Classes */
+        body.theme-joyful { --current-accent-color: var(--theme-color-joyful); }
+        body.theme-luminous { --current-accent-color: var(--theme-color-luminous); }
+        body.theme-sorrowful { --current-accent-color: var(--theme-color-sorrowful); }
+        body.theme-glorious { --current-accent-color: var(--theme-color-glorious); }
+        body.theme-litany { --current-accent-color: var(--theme-color-litany); }
+
+        /* --- Static Background Glow --- */
+        .bg-glow-blob {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.25;
+            z-index: -1;
+            pointer-events: none;
+            background-color: var(--current-accent-color);
+            transition: background-color 0.5s ease;
+        }
+        .blob-1 { width: 60vw; height: 60vw; top: -10vh; left: -10vw; }
+        .blob-2 {
+            width: 50vw; height: 50vw; bottom: -5vh; right: -10vw; opacity: 0.15;
+            background-color: color-mix(in srgb, var(--current-accent-color) 40%, #ffffff);
+        }
+
+        /* --- Application Wrapper (Used for Desktop Split) --- */
+        .app-wrapper {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* --- Sticky Top Bars --- */
+        .top-bars { flex-shrink: 0; display: flex; flex-direction: column; z-index: 1000; }
+
+        .mystery-indicator-bar {
+            height: var(--indicator-bar-height);
+            background-color: rgba(10, 12, 18, 0.5);
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            border-bottom: var(--glass-border);
+            display: flex; align-items: center; justify-content: center;
+        }
+        
+        #mystery-indicator-text { color: var(--text-secondary); font-size: 0.75rem; font-weight: 500; }
+
+        .app-header {
+            height: var(--header-height);
+            background-color: var(--glass-surface);
+            backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur));
+            border-bottom: var(--glass-border);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+
+        .menu-toggle-btn {
+            background: none; border: none; color: var(--text-secondary);
+            font-size: 1.8rem; cursor: pointer; padding: 8px; width: 48px;
+            transition: color 0.2s, transform 0.2s;
+        }
+        .menu-toggle-btn:hover { color: var(--text-primary); transform: scale(1.05); }
+
+        .header-title-container { text-align: center; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; }
+        
+        #header-title-main {
+            font-weight: 600; color: var(--current-accent-color);
+            font-size: clamp(0.85rem, 4vw, 1.05rem); line-height: 1.2;
+            text-shadow: 0 0 12px color-mix(in srgb, var(--current-accent-color) 40%, transparent);
+            transition: color 0.4s;
+        }
+        
+        #header-subtitle { font-size: 0.7rem; color: var(--text-secondary); line-height: 1.1; }
+
+        /* --- Decade Tracker --- */
+        .decade-progress-wrapper {
+            height: var(--decade-tracker-height);
+            background-color: rgba(10, 12, 18, 0.4);
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            border-bottom: var(--glass-border);
+            display: flex; justify-content: center; align-items: center;
+            transition: height 0.3s ease, opacity 0.3s ease; overflow: hidden;
+        }
+        .decade-progress-wrapper.hidden { height: 0; opacity: 0; border-bottom: none; }
+        
+        .dot {
+            width: var(--decade-dot-size); height: var(--decade-dot-size);
+            border-radius: 50%; background-color: rgba(255, 255, 255, 0.15);
+            margin: 0 3px; transition: all 0.3s ease; box-shadow: inset 0 1px 1px rgba(0,0,0,0.5);
+        }
+        .dot.active { transform: scale(1.4); box-shadow: 0 0 8px currentColor; }
+        .dot.our-father.active { background-color: var(--prayer-color-of); color: var(--prayer-color-of); }
+        .dot.hail-mary.active { background-color: var(--prayer-color-hm); color: var(--prayer-color-hm); }
+        .dot.glory-be.active { background-color: var(--prayer-color-gb); color: var(--prayer-color-gb); }
+        .dot.fatima-prayer.active { background-color: var(--prayer-color-fp); color: var(--prayer-color-fp); }
+
+        /* --- Main Content Area --- */
+        .main-content {
+            flex: 1; overflow-y: auto; padding: 16px;
+            display: flex; flex-direction: column; align-items: center;
+            transition: opacity 0.25s ease-in-out; scroll-behavior: smooth;
+        }
+        .main-content.fade-out { opacity: 0; }
+
+        /* Content Constraints for Readability */
+        .content-container { width: 100%; max-width: 600px; display: flex; flex-direction: column; }
+
+        /* Litany Tabs */
+        .litany-tabs {
+            display: none; background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.08); padding: 4px;
+            border-radius: 20px; max-width: 250px; margin: 0 auto 16px; width: 100%;
+        }
+        .litany-tabs.visible { display: flex; }
+        .litany-tab {
+            flex: 1; background: transparent; color: var(--text-secondary);
+            border: none; padding: 8px; border-radius: 16px;
+            font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: 0.3s;
+        }
+        .litany-tab.active {
+            background: color-mix(in srgb, var(--current-accent-color) 25%, rgba(255,255,255,0.1));
+            color: var(--text-primary); font-weight: 600;
+        }
+
+        /* Image Grid Collapse Animator */
+        .image-animator {
+            display: grid; grid-template-rows: 1fr;
+            transition: grid-template-rows 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            margin: 0 auto 16px; max-width: 280px; width: 100%;
+        }
+        .image-animator.collapsed { grid-template-rows: 0fr; margin-bottom: 0; }
+        .image-animator-inner { min-height: 0; overflow: hidden; transition: opacity 0.3s ease, transform 0.4s ease; }
+        .image-animator.collapsed .image-animator-inner { opacity: 0; transform: scale(0.95); }
+
+        .mystery-image-card {
+            padding: 8px; border: var(--glass-border); border-radius: 14px;
+            background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(8px);
+            box-shadow: var(--glass-shadow);
+        }
+        .mystery-image-card img { display: block; width: 100%; aspect-ratio: 1/1; object-fit: contain; border-radius: 6px; }
+
+        /* Prayer Card */
+        .prayer-card {
+            background: var(--glass-surface); backdrop-filter: blur(var(--glass-blur));
+            -webkit-backdrop-filter: blur(var(--glass-blur));
+            border: var(--glass-border); padding: 24px; border-radius: 20px;
+            box-shadow: var(--glass-shadow); position: relative; z-index: 1; width: 100%;
+        }
+
+        #prayer-text { font-size: var(--prayer-font-size); white-space: pre-line; line-height: 1.7; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+        #prayer-text.centered { text-align: center; }
+        #prayer-text.litany-style { text-align: center; font-size: calc(var(--prayer-font-size) * 0.95); line-height: 1.8; }
+
+        .announcement-block { margin-bottom: 1em; padding-bottom: 0.8em; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .announcement-block .mystery-name {
+            display: block; font-weight: 600; font-size: calc(var(--prayer-font-size) * 1.15);
+            color: var(--current-accent-color); text-align: center;
+            text-shadow: 0 0 10px color-mix(in srgb, var(--current-accent-color) 30%, transparent); margin-bottom: 8px;
+        }
+        .announcement-block .scripture-passage {
+            display: block; font-style: italic; color: var(--text-secondary);
+            font-size: calc(var(--prayer-font-size) * 0.9); line-height: 1.6;
+        }
+        
+        .hidden { display: none !important; }
+
+        /* --- Footer Controls --- */
+        .app-footer {
+            flex-shrink: 0; height: var(--footer-height);
+            background-color: var(--glass-surface); backdrop-filter: blur(var(--glass-blur));
+            -webkit-backdrop-filter: blur(var(--glass-blur)); border-top: var(--glass-border);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 16px; z-index: 1000; width: 100%;
+        }
+
+        .footer-btn {
+            width: 48px; height: 48px; border-radius: 16px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent); border: 1px solid rgba(255,255,255,0.2);
+            color: var(--current-accent-color); font-size: 1.5rem; font-weight: bold;
+            display: flex; justify-content: center; align-items: center;
+            cursor: pointer; transition: 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .footer-btn:hover:not(:disabled) { background: rgba(255,255,255,0.15); transform: translateY(-2px); color: #fff;}
+        .footer-btn:active:not(:disabled) { transform: scale(0.95); }
+        .footer-btn:disabled { opacity: 0.4; cursor: not-allowed; border-color: transparent; }
+
+        .progress-info { text-align: center; font-size: 0.8rem; color: var(--text-secondary); padding: 0 10px; }
+        .progress-info strong { color: var(--text-primary); }
+
+        /* --- Side Menu --- */
+        .side-menu {
+            position: fixed; top: 0; left: 0; bottom: 0; width: var(--menu-width);
+            background-color: var(--glass-menu); backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px); border-right: var(--glass-border);
+            padding: calc(var(--header-height) + var(--indicator-bar-height) + 16px) 20px 20px;
+            transform: translateX(-100%); transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+            z-index: 1100; overflow-y: auto;
+        }
+        .side-menu.open { transform: translateX(0); }
+        .side-menu h3 { color: var(--current-accent-color); margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 1.2rem; }
+        .side-menu ul { list-style: none; }
+        .side-menu li { margin-bottom: 8px; }
+        
+        .side-menu button, .side-menu a {
+            display: block; width: 100%; background: none; border: none;
+            color: var(--text-secondary); padding: 12px; text-align: left;
+            font-size: 1rem; border-radius: 8px; cursor: pointer; transition: 0.2s;
+            text-decoration: none; font-family: inherit;
+        }
+        .side-menu button:hover, .side-menu a:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+        .side-menu .selected { background: color-mix(in srgb, var(--current-accent-color) 15%, transparent); color: var(--current-accent-color); font-weight: 600; }
+        .side-menu hr { border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 16px 0; }
+        
+        .menu-overlay {
+            position: fixed; inset: 0; background-color: var(--bg-overlay);
+            backdrop-filter: blur(3px); z-index: 1050; opacity: 0; pointer-events: none; transition: opacity 0.4s;
+        }
+        .menu-overlay.visible { opacity: 1; pointer-events: auto; }
+
+        /* Custom Toggle Switch & Controls */
+        .controls-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; color: var(--text-secondary); font-size: 0.95rem; }
+        .font-btn { background: rgba(255,255,255,0.1); border: none; color: #fff; width: 32px; height: 32px; border-radius: 6px; font-size: 1.2rem; cursor: pointer; }
+        .font-btn:disabled { opacity: 0.3; }
+        
+        .toggle-switch { position: relative; width: 46px; height: 24px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.5); border-radius: 24px; transition: 0.4s; border: 1px solid rgba(255,255,255,0.1); }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 3px; background-color: white; border-radius: 50%; transition: 0.4s; }
+        input:checked + .slider { background-color: var(--current-accent-color); border-color: transparent; }
+        input:checked + .slider:before { transform: translateX(22px); }
+
+        /* =========================================================================
+           DESKTOP RESPONSIVE LAYOUT
+           ========================================================================= */
+        @media (min-width: 800px) {
+            body { flex-direction: row; }
+            
+            /* Sidebar becomes a persistent left panel */
+            .side-menu {
+                position: relative; transform: translateX(0); padding-top: 30px;
+                box-shadow: none; z-index: 10;
+            }
+            .menu-overlay { display: none !important; }
+            
+            /* Hide hamburger menu button on desktop */
+            .menu-toggle-btn { display: none; }
+            
+            /* Add padding to account for hidden hamburger button to keep title centered */
+            .app-header { padding-left: 48px; }
+
+            /* Desktop Main Content Area */
+            .main-content {
+                padding: 40px 24px 100px; /* Extra bottom padding for floating footer */
+            }
+
+            .image-animator { max-width: 340px; }
+            .prayer-card { padding: 32px; }
+
+            /* Morph Footer into a floating pill on Desktop */
+            .app-footer {
+                position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+                width: auto; min-width: 480px; height: 64px;
+                border-radius: 32px; border: var(--glass-border);
+                box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+            }
+        }
+    </style>
+</head>
+<body class="theme-glorious">
+
+    <!-- Background (Static) -->
+    <div class="bg-glow-blob blob-1"></div>
+    <div class="bg-glow-blob blob-2"></div>
+
+    <!-- Persistent Desktop / Slide Mobile Menu -->
+    <nav id="menu" class="side-menu">
+        <h3>Rosary Companion</h3>
+        <ul>
+            <li><button class="mystery-btn" data-mystery="joyful">Joyful Mysteries</button></li>
+            <li><button class="mystery-btn" data-mystery="luminous">Luminous Mysteries</button></li>
+            <li><button class="mystery-btn" data-mystery="sorrowful">Sorrowful Mysteries</button></li>
+            <li><button class="mystery-btn" data-mystery="glorious">Glorious Mysteries</button></li>
+            <li><hr></li>
+            <li><button id="btn-litany">Litany of Loreto</button></li>
+            <li><hr></li>
+            <li><button id="btn-restart">Restart Current Prayer</button></li>
+            <li><hr></li>
+            <li class="controls-row">
+                <span>Font Size</span>
+                <div>
+                    <button id="btn-font-dec" class="font-btn">&ndash;</button>
+                    <button id="btn-font-inc" class="font-btn">+</button>
+                </div>
+            </li>
+            <li class="controls-row">
+                <span>Show Images</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="toggle-images" checked>
+                    <span class="slider"></span>
+                </label>
+            </li>
+            <li><hr></li>
+            <li><a href="about.html" target="_blank" rel="noopener noreferrer" id="about-btn" title="About this App">About this App</a></li>
+            <li><a href="https://x.com/exanxc" target="_blank" rel="noopener noreferrer" id="follow-btn" title="Follow me on X (Twitter)">Follow me on X</a></li>
+        </ul>
+    </nav>
+    <div id="menu-overlay" class="menu-overlay"></div>
+
+    <!-- Right Side Application Wrapper -->
+    <div class="app-wrapper">
+        <div class="top-bars">
+            <div class="mystery-indicator-bar">
+                <span id="mystery-indicator-text">Loading...</span>
+            </div>
+            <header class="app-header">
+                <button id="btn-menu" class="menu-toggle-btn" aria-label="Menu">☰</button>
+                <div class="header-title-container">
+                    <span id="header-title-main">Loading...</span>
+                    <span id="header-subtitle">Rosary Companion</span>
+                </div>
+                <div style="width: 48px;"></div>
+            </header>
+            <div id="decade-tracker" class="decade-progress-wrapper hidden">
+                <!-- Dots injected via JS -->
+            </div>
+        </div>
+
+        <main id="main-content" class="main-content">
+            <div class="content-container">
+                <!-- Litany Options -->
+                <div id="litany-tabs" class="litany-tabs">
+                    <button class="litany-tab active" data-lang="en">English</button>
+                    <button class="litany-tab" data-lang="la">Latin</button>
+                </div>
+
+                <!-- Image Area -->
+                <div id="image-animator" class="image-animator">
+                    <div class="image-animator-inner">
+                        <div class="mystery-image-card">
+                            <img id="mystery-image" src="" alt="Mystery Image" onerror="this.style.display='none'">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Prayer Text Area -->
+                <div class="prayer-card">
+                    <div id="announcement-block" class="announcement-block hidden">
+                        <span id="mystery-name" class="mystery-name"></span>
+                        <span id="scripture-passage" class="scripture-passage"></span>
+                        <p style="text-align:center; font-size: 0.9em; margin-top: 10px; color: var(--text-secondary);">Recite 1 Our Father, 10 Hail Marys, 1 Glory Be, and the Fatima Prayer.</p>
+                    </div>
+                    <p id="prayer-text"></p>
+                </div>
+            </div>
+        </main>
+
+        <footer id="app-footer" class="app-footer">
+            <button id="btn-prev" class="footer-btn">&larr;</button>
+            <div class="progress-info" id="progress-info">Initializing...</div>
+            <button id="btn-next" class="footer-btn">&rarr;</button>
+        </footer>
+    </div>
+
+    <script>
+        // --- Static Data ---
+        const prayers = {
+            sign_of_cross: "In the name of the Father, and of the Son, and of the Holy Spirit. Amen.",
+            apostles_creed: "I believe in God, the Father almighty, Creator of heaven and earth, and in Jesus Christ, His only Son, our Lord, who was conceived by the Holy Spirit, born of the Virgin Mary, suffered under Pontius Pilate, was crucified, died and was buried; He descended into hell; on the third day He rose again from the dead; He ascended into heaven, and is seated at the right hand of God the Father almighty; from there He will come to judge the living and the dead. I believe in the Holy Spirit, the holy catholic Church, the communion of saints, the forgiveness of sins, the resurrection of the body, and life everlasting. Amen.",
+            our_father: "Our Father, who art in heaven, hallowed be Thy name; Thy kingdom come; Thy will be done on earth as it is in heaven. Give us this day our daily bread; and forgive us our trespasses as we forgive those who trespass against us; and lead us not into temptation, but deliver us from evil. Amen.",
+            hail_mary: "Hail Mary, full of grace. The Lord is with thee. Blessed art thou amongst women, and blessed is the fruit of thy womb, Jesus. Holy Mary, Mother of God, pray for us sinners, now and at the hour of our death. Amen.",
+            glory_be: "Glory be to the Father, and to the Son, and to the Holy Spirit, as it was in the beginning, is now, and ever shall be, world without end. Amen.",
+            fatima_prayer: "O my Jesus, forgive us our sins, save us from the fires of hell, lead all souls to Heaven, especially those most in need of Thy mercy. Amen.",
+            hail_holy_queen: "Hail, holy Queen, Mother of mercy, our life, our sweetness and our hope. To thee do we cry, poor banished children of Eve: to thee do we send up our sighs, mourning and weeping in this vale of tears. Turn then, most gracious Advocate, thine eyes of mercy toward us, and after this our exile, show unto us the blessed fruit of thy womb, Jesus. O clement, O loving, O sweet Virgin Mary! Pray for us, O holy Mother of God. That we may be made worthy of the promises of Christ.",
+            rosary_prayer: "Let us pray. O God, whose only begotten Son, by His life, death, and resurrection, has purchased for us the rewards of eternal life, grant, we beseech Thee, that meditating upon these mysteries of the Most Holy Rosary of the Blessed Virgin Mary, we may imitate what they contain and obtain what they promise, through the same Christ Our Lord. Amen."
+        };
+
+        const litanyTexts = {
+            en: `Lord have mercy.\nChrist have mercy.\nLord have mercy.\nChrist hear us.\nChrist graciously hear us.\n\nGod, the Father of heaven,\nhave mercy on us.\n\nGod the Son, Redeemer of the world,\nGod the Holy Spirit,\nHoly Trinity, one God,\n\nHoly Mary,\npray for us.\nHoly Mother of God,\nHoly Virgin of virgins,\nMother of Christ,\nMother of the Church,\nMother of Mercy,\nMother of divine grace,\nMother of Hope,\nMother most pure,\nMother most chaste,\nMother inviolate,\nMother undefiled,\nMother most amiable,\nMother admirable,\nMother of good counsel,\nMother of our Creator,\nMother of our Saviour,\nVirgin most prudent,\nVirgin most venerable,\nVirgin most renowned,\nVirgin most powerful,\nVirgin most merciful,\nVirgin most faithful,\nMirror of justice,\nSeat of wisdom,\nCause of our joy,\nSpiritual vessel,\nVessel of honour,\nSingular vessel of devotion,\nMystical rose,\nTower of David,\nTower of ivory,\nHouse of gold,\nArk of the covenant,\nGate of heaven,\nMorning star,\nHealth of the sick,\nRefuge of sinners,\nSolace of Migrants,\nComfort of the afflicted,\nHelp of Christians,\nQueen of Angels,\nQueen of Patriarchs,\nQueen of Prophets,\nQueen of Apostles,\nQueen of Martyrs,\nQueen of Confessors,\nQueen of Virgins,\nQueen of all Saints,\nQueen conceived without original sin,\nQueen assumed into heaven,\nQueen of the most holy Rosary,\nQueen of families,\nQueen of peace.\n\nLamb of God, who takes away the sins of the world,\nspare us, O Lord.\n\nLamb of God, who takes away the sins of the world,\ngraciously hear us, O Lord.\n\nLamb of God, who takes away the sins of the world,\nhave mercy on us.\n\nPray for us, O holy Mother of God.\nThat we may be made worthy of the promises of Christ.\n\nLet us pray.\nGrant, we beseech thee,\nO Lord God,\nthat we, your servants,\nmay enjoy perpetual health of mind and body;\nand by the glorious intercession of the Blessed Mary, ever Virgin,\nmay be delivered from present sorrow,\nand obtain eternal joy.\nThrough Christ our Lord.\nAmen.`,
+            la: `Kyrie, eleison. ℟. Kyrie, eleison.\nChriste, eleison. ℟. Christe, eleison.\nKyrie, eleison. ℟. Kyrie, eleison.\nChriste, audi nos. ℟. Christe, audi nos.\nChriste, exaudi nos. ℟. Christe, exaudi nos.\nPater de caelis, Deus, ℟. miserere nobis.\nFili, Redemptor mundi, Deus, ℟. miserere nobis.\nSpiritus Sancte, Deus, ℟. miserere nobis.\nSancta Trinitas, unus Deus, ℟. miserere nobis.\nSancta Maria, ℟, ora pro nobis.\nSancta Dei Genitrix, ℟ ora pro nobis.\nSancta Virgo virginum, ℟ ora pro nobis.\nMater Christi, ℟ ora pro nobis.\nMater Ecclesiae, ℟ ora pro nobis\nMater misericordiae, ℟ ora pro nobis.\nMater divinae gratiae, ℟ ora pro nobis.\nMater spei, ℟ ora pro nobis.\nMater purissima, ℟ ora pro nobis.\nMater castissima, ℟ ora pro nobis.\nMater inviolata, ℟ ora pro nobis.\nMater intemerata, ℟ ora pro nobis.\nMater amabilis, ℟ ora pro nobis\nMater admirabilis, ℟ ora pro nobis.\nMater boni consilii, ℟ ora pro nobis.\nMater Creatoris, ℟ ora pro nobis.\nMater Salvatoris, ℟ ora pro nobis.\nVirgo prudentissima, ℟ ora pro nobis.\nVirgo veneranda, ℟ ora pro nobis.\nVirgo praedicanda, ℟ ora pro nobis.\nVirgo potens, ℟ ora pro nobis.\nVirgo clemens, ℟ ora pro nobis.\nVirgo fidelis, ℟ ora pro nobis.\nSpeculum iustitiae, ℟ ora pro nobis.\nSedes sapientiae, ℟ ora pro nobis.\nCausa nostrae laetitiae, ℟ ora pro nobis.\nVas spirituale, ℟ ora pro nobis.\nVas honorabile, ℟ ora pro nobis.\nVas insigne devotionis, ℟ ora pro nobis.\nRosa mystica, ℟ ora pro nobis.\nTurris Davidica, ℟ ora pro nobis.\nTurris eburnea, ℟ ora pro nobis.\nDomus aurea, ℟ ora pro nobis.\nFoederis arca, ℟ ora pro nobis.\nIanua coeli, ℟ ora pro nobis.\nStella matutina, ℟ ora pro nobis.\nSalus infirmorum, ℟ ora pro nobis.\nRefugium peccatorum, ℟ ora pro nobis.\nSolacium migrantium, ℟ ora pro nobis.\nConsolatrix afflictorum, ℟ ora pro nobis.\nAuxilium Christianorum, ℟ ora pro nobis.\nRegina Angelorum, ℟ ora pro nobis.\nRegina Patriarcharum, ℟ ora pro nobis.\nRegina Prophetarum, ℟ ora pro nobis.\nRegina Apostolorum, ℟ ora pro nobis.\nRegina Martyrum, ℟ ora pro nobis.\nRegina Confessorum, ℟ ora pro nobis.\nRegina Virginum, ℟ ora pro nobis.\nRegina Sanctorum omnium, ℟ ora pro nobis.\nRegina sine labe originali concepta, ℟ ora pro nobis.\nRegina in caelum assumpta, ℟ ora pro nobis.\nRegina sacratissimi Rosarii, ℟ ora pro nobis.\nRegina familiae, ℟ ora pro nobis.\nRegina pacis, ℟ ora pro nobis.\nAgnus Dei, qui tollis peccata mundi, ℟ parce nobis, Domine.\nAgnus Dei, qui tollis peccata mundi, ℟ exaudi nos, Domine.\nAgnus Dei, qui tollis peccata mundi, ℟ miserere nobis.`
+        };
+
+        const mysteriesData = {
+            joyful: { name: "Joyful Mysteries", themeClass: "theme-joyful", mysteries: [
+                { name: "The Annunciation", scripturePassage: `"In the sixth month the angel Gabriel was sent from God to a city of Galilee named Nazareth, to a virgin betrothed to a man whose name was Joseph, of the house of David; and the virgin's name was Mary" (Lk 1:26-27).`, imageSrc: "images/the_annunciation.jpg" },
+                { name: "The Visitation", scripturePassage: `"In those days Mary arose and went with haste into the hill country, to a city of Judah, and she entered the house of Zechariah and greeted Elizabeth. And when Elizabeth heard the greeting of Mary, the babe leaped in her womb; and Elizabeth was filled with the Holy Spirit and she exclaimed with a loud cry, 'Blessed are you among women, and blessed is the fruit of thy womb!"' (Lk 1:39-42).`, imageSrc: "images/the_visitation.jpg" },
+                { name: "The Nativity", scripturePassage: `"In those days a decree went out from Caesar Augustus that all the world should be enrolled. This was the first enrolment, when Quirinius was governor of Syria. And all went to be enrolled, each to his own city.\nAnd Joseph also went up from Galilee, from the city of Nazareth, to Judea, to the city of David, which is called Bethlehem, because he was of the house and lineage of David, to be enrolled with Mary, his betrothed, who was with child. And while they were there, the time came for her to be delivered. And she gave birth to her first-born son and wrapped him in swaddling cloths, and laid him in a manger, because there was no place for them in the inn" (Lk 2:1-7).`, imageSrc: "images/the_nativity.jpg" },
+                { name: "The Presentation", scripturePassage: `"And at the end of eight days, when he was circumcised, he was called Jesus, the name given by the angel before he was conceived in the womb. And when the time came for their purification according to the law of Moses, they brought him up to Jerusalem to present him to the Lord (as it is written in the law of the Lord, 'Every male that opens the womb shall be called holy to the Lord') and to offer a sacrifice according to what is said in the law of the Lord, 'a pair of turtledoves, or two young pigeons"' (Lk 2:21-24).`, imageSrc: "images/the_presentation.jpg" },
+                { name: "The Finding in the Temple", scripturePassage: `"Now his parents went to Jerusalem every year at the feast of the Passover. And when he was twelve years old, they went up according to custom; and when the feast was ended, as they were returning, the boy Jesus stayed behind in Jerusalem. His parents did not know it ...\nAfter three days they found him in the temple, sitting among the teachers, listening to them and asking them questions; and all who heard him were amazed at his understanding and his answers" (Lk 2:41-47).`, imageSrc: "images/the_finding_in_the_temple.jpg" }
+            ]},
+            luminous: { name: "Luminous Mysteries", themeClass: "theme-luminous", mysteries: [
+                { name: "The Baptism of Jesus", scripturePassage: `"And when Jesus was baptized, he went up immediately from the water, and behold, the heavens were opened and he saw the Spirit of God descending like a dove, and alighting on him; and lo, a voice from heaven, saying, 'This is my beloved Son, with whom I am well-pleased"' (Mt 3:16-17).`, imageSrc: "images/the_baptism_of_jesus.jpg" },
+                { name: "The Wedding at Cana", scripturePassage: `"On the third day there was a marriage at Cana in Galilee, and the mother of Jesus was there; Jesus also was invited to the marriage, with his disciples. When the wine failed, the mother of Jesus said to him, 'They have no wine.' And Jesus said to her, 'O woman, what have you to do with me? My hour has not yet come.' His mother said to the servants, 'Do whatever he tells you"' (Jn 2:1-5).`, imageSrc: "images/the_wedding_at_cana.jpg" },
+                { name: "The Proclamation of the Kingdom", scripturePassage: `"The time is fulfilled, and the kingdom of God is at hand; repent, and believe in the gospel" (Mk 1:15).`, imageSrc: "images/the_proclamation_of_the_kingdom.jpg" },
+                { name: "The Transfiguration", scripturePassage: `"And after six days Jesus took with him Peter and James and John his brother, and led them up a high mountain apart. And he was transfigured before them, and his face shone like the sun, and his garments became white as light" (Mt 17:1-2).`, imageSrc: "images/the_transfiguration.jpg" },
+                { name: "The Institution of the Eucharist", scripturePassage: `"Now as they were eating, Jesus took bread, and blessed, and broke it, and gave it to the disciples and said, 'Take, eat; this is my body"' (Mt 26:26).`, imageSrc: "images/the_institution_of_the_eucharist.jpg" }
+            ]},
+            sorrowful: { name: "Sorrowful Mysteries", themeClass: "theme-sorrowful", mysteries: [
+                { name: "The Agony in the Garden", scripturePassage: `"Then Jesus went with them to a place called Gethsemane, and he said to his disciples, 'Sit here, while I go yonder and pray.' And taking with him Peter and the two sons of Zebedee, he began to be sorrowful and troubled. Then he said to them, 'My soul is very sorrowful, even to death; remain here, and watch with me.' And going a little farther he fell on his face and prayed, 'My Father, if it be possible, let this cup pass from me; nevertheless, not as I will, but as you will"' (Mt 26:36-39).`, imageSrc: "images/the_agony_in_the_garden.jpg" },
+                { name: "The Scourging at the Pillar", scripturePassage: `"Pilate released Barabbas to them, but after he had Jesus scourged, he handed him over to be crucified" (Mt 27:26).`, imageSrc: "images/the_scourging_at_the_pillar.jpg" },
+                { name: "The Crowning with Thorns", scripturePassage: `"Then the soldiers of the governor took Jesus into the praetorium, and they gathered the whole battalion before him. And they stripped him and put a scarlet robe upon him, and plaiting a crown of thorns they put it on his head, and put a reed in his right hand. And kneeling before him they mocked him, saying, 'Hail, King of the Jews!"' (Mt 27:27-29).`, imageSrc: "images/the_crowning_with_thorns.jpg" },
+                { name: "The Carrying of the Cross", scripturePassage: `"And they compelled a passer-by, Simon of Cyrene, who was coming in from the country, the father of Alexander and Rufus, to carry his cross. And they brought him to the place called Golgotha (which means the place of a skull)" (Mk 15:21-22).`, imageSrc: "images/the_carrying_of_the_cross.jpg" },
+                { name: "The Crucifixion", scripturePassage: `"And when they came to the place which is called The Skull, there they crucified him, and the criminals, one on the right and one on the left. And Jesus said, 'Father, forgive them; for they know not what they do' ...\nIt was now about the sixth hour, and there was darkness over the whole land until the ninth hour, while the sun's light failed; and the curtain of the temple was torn in two. Then Jesus, crying with a loud voice, said, 'Father, into thy hands I commit my spirit!' And having said this he breathed his last" (Lk 23:33-46).`, imageSrc: "images/the_crucifixion.jpg" }
+            ]},
+            glorious: { name: "Glorious Mysteries", themeClass: "theme-glorious", mysteries: [
+                { name: "The Resurrection", scripturePassage: `"But on the first day of the week, at early dawn, they went to the tomb, taking the spices which they had prepared. And they found the stone rolled away from the tomb, but when they went in they did not find the body. While they were perplexed about this, behold, two men stood by them in dazzling apparel; and as they were frightened and bowed their faces to the ground, the men said to them, 'Why do you seek the living among the dead? He is not here, but has risen"' (Lk 24:1-5).`, imageSrc: "images/the_resurrection.jpg" },
+                { name: "The Ascension", scripturePassage: `"So then the Lord Jesus, after he had spoken to them, was taken up into heaven, and sat down at the right hand of God" (Mk 16:19).`, imageSrc: "images/the_ascension.jpg" },
+                { name: "The Descent of the Holy Spirit", scripturePassage: `"When the day of Pentecost had come, they were all together in one place. And suddenly a sound came from heaven like the rush of a mighty wind, and it filled all the house where they were sitting. And there appeared to them tongues as of fire, distributed and resting on each one of them. And they were all filled with the Holy Spirit and began to speak in other tongues, as the Spirit gave them utterance" (Acts 2:1-4).`, imageSrc: "images/the_descent_of_the_holy_spirit.jpg" },
+                { name: "The Assumption of Mary", scripturePassage: `"Henceforth all generations will call me blessed; for he who is mighty has done great things for me" (Lk 1:48-49).`, imageSrc: "images/the_assumption_of_mary.jpg" },
+                { name: "The Coronation of Mary", scripturePassage: `"And a great portent appeared in heaven, a woman clothed with the sun, with the moon under her feet, and on her head a crown of twelve stars" (Rev 12:1).`, imageSrc: "images/the_coronation_of_mary.jpg" }
+            ]}
+        };
+
+        const IMG_INTRO = "images/rosary_intro.jpg";
+        const IMG_CONCLUDE = "images/conclusion.jpg";
+
+        // --- App State ---
+        const state = {
+            mode: 'rosary', // 'rosary' or 'litany'
+            mysteryKey: 'glorious',
+            step: 0,
+            litanyLang: 'en',
+            imagesVisible: true,
+            fontSizeStep: 0,
+            sequence: []
+        };
+
+        // --- DOM Elements Cache ---
+        const el = {
+            body: document.body,
+            menu: document.getElementById('menu'),
+            menuOverlay: document.getElementById('menu-overlay'),
+            mainContent: document.getElementById('main-content'),
+            
+            indicatorText: document.getElementById('mystery-indicator-text'),
+            titleMain: document.getElementById('header-title-main'),
+            titleSub: document.getElementById('header-subtitle'),
+            
+            tracker: document.getElementById('decade-tracker'),
+            trackerDots: [], // Populated on init
+            
+            litanyTabs: document.getElementById('litany-tabs'),
+            litanyBtns: document.querySelectorAll('.litany-tab'),
+            
+            imageAnimator: document.getElementById('image-animator'),
+            image: document.getElementById('mystery-image'),
+            
+            announceBlock: document.getElementById('announcement-block'),
+            announceMysteryName: document.getElementById('mystery-name'),
+            announceScripture: document.getElementById('scripture-passage'),
+            prayerText: document.getElementById('prayer-text'),
+            
+            footer: document.getElementById('app-footer'),
+            btnPrev: document.getElementById('btn-prev'),
+            btnNext: document.getElementById('btn-next'),
+            progressInfo: document.getElementById('progress-info'),
+
+            fontDec: document.getElementById('btn-font-dec'),
+            fontInc: document.getElementById('btn-font-inc'),
+            toggleImages: document.getElementById('toggle-images')
+        };
+
+        // --- Core Logic ---
+        
+        function getTodaysMystery() {
+            const day = new Date().getDay();
+            if (day === 1 || day === 6) return 'joyful';
+            if (day === 4) return 'luminous';
+            if (day === 2 || day === 5) return 'sorrowful';
+            return 'glorious';
+        }
+
+        // Checks if layout is desktop or mobile
+        function isMobile() {
+            return window.innerWidth < 800;
+        }
+
+        // Pre-calculates the entire sequence to make UI updates highly performant
+        function buildSequence(key) {
+            const mData = mysteriesData[key];
+            if(!mData) return [];
+            
+            const seq = [];
+            const add = (mTitle, sTitle, text, img, isAnnounce, mName, script, trckr, dotIdx, dotCls) => {
+                seq.push({
+                    mainTitle: mTitle, subTitle: sTitle, text: text, imageSrc: img,
+                    isAnnouncement: isAnnounce, mysteryName: mName, scripture: script,
+                    showTracker: trckr, dotIdx: dotIdx, dotClass: dotCls, sectionName: sTitle
+                });
+            };
+
+            add("Sign of the Cross", "Introduction", prayers.sign_of_cross, IMG_INTRO, false, "", "", false, -1, "");
+            add("Apostles' Creed", "Introduction", prayers.apostles_creed, IMG_INTRO, false, "", "", false, -1, "");
+            add("Our Father", "Introduction", prayers.our_father, IMG_INTRO, false, "", "", false, -1, "");
+            add("Hail Mary (Faith)", "Introduction", prayers.hail_mary, IMG_INTRO, false, "", "", false, -1, "");
+            add("Hail Mary (Hope)", "Introduction", prayers.hail_mary, IMG_INTRO, false, "", "", false, -1, "");
+            add("Hail Mary (Charity)", "Introduction", prayers.hail_mary, IMG_INTRO, false, "", "", false, -1, "");
+            add("Glory Be", "Introduction", prayers.glory_be, IMG_INTRO, false, "", "", false, -1, "");
+
+            mData.mysteries.forEach((myst, i) => {
+                const decNum = i + 1;
+                const decImg = myst.imageSrc || IMG_INTRO;
+                const secName = `Decade ${decNum}`;
+                
+                add(secName, secName, "", decImg, true, myst.name, myst.scripturePassage, true, -1, "");
+                add(myst.name, secName, prayers.our_father, decImg, false, "", "", true, 0, "our-father");
+                for(let j=0; j<10; j++) add(myst.name, secName, prayers.hail_mary, decImg, false, "", "", true, j+1, "hail-mary");
+                add(myst.name, secName, prayers.glory_be, decImg, false, "", "", true, 11, "glory-be");
+                add(myst.name, secName, prayers.fatima_prayer, decImg, false, "", "", true, 12, "fatima-prayer");
+            });
+
+            add("Hail Holy Queen", "Conclusion", prayers.hail_holy_queen, IMG_CONCLUDE, false, "", "", false, -1, "");
+            add("Rosary Prayer", "Conclusion", prayers.rosary_prayer, IMG_CONCLUDE, false, "", "", false, -1, "");
+            add("Sign of the Cross", "Conclusion", prayers.sign_of_cross, IMG_CONCLUDE, false, "", "", false, -1, "");
+
+            // Precalculate sections for progress tracking
+            const sectionCounts = {};
+            seq.forEach(s => sectionCounts[s.sectionName] = (sectionCounts[s.sectionName] || 0) + 1);
+            
+            const currentCounts = {};
+            seq.forEach(s => {
+                currentCounts[s.sectionName] = (currentCounts[s.sectionName] || 0) + 1;
+                s.progressHtml = `<strong>${s.sectionName}</strong> (${currentCounts[s.sectionName]}/${sectionCounts[s.sectionName]})`;
+            });
+
+            return seq;
+        }
+
+        function initTracker() {
+            el.tracker.innerHTML = '';
+            el.trackerDots = [];
+            for (let i = 0; i < 13; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'dot';
+                el.tracker.appendChild(dot);
+                el.trackerDots.push(dot);
+            }
+        }
+
+        // --- Render UI ---
+        
+        function updateUI() {
+            // Apply Theme & Classes
+            el.body.className = state.mode === 'litany' ? 'theme-litany' : mysteriesData[state.mysteryKey]?.themeClass || '';
+            if (state.mode === 'litany') {
+                el.imageAnimator.classList.add('collapsed');
+            } else {
+                el.imageAnimator.classList.toggle('collapsed', !state.imagesVisible);
+            }
+            
+            updateMenuHighlights();
+
+            if (state.mode === 'litany') {
+                renderLitany();
+            } else {
+                renderRosaryStep();
+            }
+            saveState();
+        }
+
+        function renderLitany() {
+            el.litanyTabs.classList.add('visible');
+            el.footer.classList.add('hidden');
+            el.tracker.classList.add('hidden');
+            
+            el.indicatorText.textContent = "Litany of Loreto";
+            el.titleMain.textContent = "Litany of Loreto";
+            el.titleSub.textContent = state.litanyLang === 'la' ? 'Latin' : 'English';
+            
+            el.announceBlock.classList.add('hidden');
+            el.prayerText.classList.remove('hidden');
+            el.prayerText.className = 'litany-style';
+            el.prayerText.textContent = litanyTexts[state.litanyLang];
+            
+            el.litanyBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.lang === state.litanyLang));
+        }
+
+        function renderRosaryStep() {
+            el.litanyTabs.classList.remove('visible');
+            el.footer.classList.remove('hidden');
+            
+            const isFinished = state.step >= state.sequence.length;
+            if (isFinished) {
+                renderFinished();
+                return;
+            }
+
+            const stepData = state.sequence[state.step];
+            
+            el.indicatorText.textContent = mysteriesData[state.mysteryKey].name;
+            el.titleMain.textContent = stepData.mainTitle;
+            el.titleSub.textContent = stepData.subTitle;
+            
+            // Image safely updates
+            if (el.image.src && !el.image.src.endsWith(stepData.imageSrc)) {
+                 el.image.style.display = 'block'; // Reset display in case of previous onerror
+                 el.image.src = stepData.imageSrc;
+            } else if (!el.image.src) {
+                 el.image.src = stepData.imageSrc;
+            }
+
+            // Tracker
+            if (stepData.showTracker) {
+                el.tracker.classList.remove('hidden');
+                el.trackerDots.forEach((dot, idx) => {
+                    dot.className = 'dot';
+                    if (idx === 0) dot.classList.add('our-father');
+                    else if (idx >= 1 && idx <= 10) dot.classList.add('hail-mary');
+                    else if (idx === 11) dot.classList.add('glory-be');
+                    else if (idx === 12) dot.classList.add('fatima-prayer');
+                    
+                    if (idx === stepData.dotIdx) dot.classList.add('active');
+                });
+            } else {
+                el.tracker.classList.add('hidden');
+            }
+
+            // Content
+            if (stepData.isAnnouncement) {
+                el.prayerText.classList.add('hidden');
+                el.announceBlock.classList.remove('hidden');
+                el.announceMysteryName.textContent = stepData.mysteryName;
+                el.announceScripture.textContent = stepData.scripture;
+            } else {
+                el.announceBlock.classList.add('hidden');
+                el.prayerText.classList.remove('hidden');
+                el.prayerText.className = stepData.mainTitle.includes("Final") ? 'centered' : '';
+                el.prayerText.textContent = stepData.text;
+            }
+
+            // Footer
+            el.progressInfo.innerHTML = stepData.progressHtml;
+            el.btnPrev.disabled = state.step === 0;
+            el.btnNext.disabled = false;
+        }
+
+        function renderFinished() {
+            el.titleMain.textContent = "Rosary Complete";
+            el.titleSub.textContent = mysteriesData[state.mysteryKey].name;
+            el.tracker.classList.add('hidden');
+            el.announceBlock.classList.add('hidden');
+            el.prayerText.classList.remove('hidden');
+            el.prayerText.className = 'centered';
+            el.prayerText.textContent = "Amen.";
+            el.progressInfo.innerHTML = `Finished (${state.sequence.length}/${state.sequence.length})`;
+            el.btnNext.disabled = true;
+            el.btnPrev.disabled = false;
+        }
+
+        function setMystery(key) {
+            state.mode = 'rosary';
+            state.mysteryKey = key;
+            state.step = 0;
+            state.sequence = buildSequence(key);
+            switchView();
+        }
+
+        function switchView() {
+            el.mainContent.classList.add('fade-out');
+            setTimeout(() => {
+                updateUI();
+                el.mainContent.scrollTop = 0;
+                el.mainContent.classList.remove('fade-out');
+            }, 250); // Matches CSS transition timing
+        }
+
+        // --- Menu & Interactions ---
+        
+        function toggleMenu() {
+            // Only toggle visual overlay/slide-out on Mobile
+            if (isMobile()) {
+                el.menu.classList.toggle('open');
+                el.menuOverlay.classList.toggle('visible');
+            }
+        }
+
+        function updateMenuHighlights() {
+            document.querySelectorAll('.mystery-btn').forEach(b => b.classList.remove('selected'));
+            document.getElementById('btn-litany').classList.remove('selected');
+            if (state.mode === 'litany') {
+                document.getElementById('btn-litany').classList.add('selected');
+            } else {
+                const btn = document.querySelector(`.mystery-btn[data-mystery="${state.mysteryKey}"]`);
+                if (btn) btn.classList.add('selected');
+            }
+        }
+
+        // --- Settings & Persistence ---
+        
+        function applyFontSize() {
+            const newSize = 1 + (state.fontSizeStep * 0.08);
+            document.documentElement.style.setProperty('--prayer-font-size', `${Math.max(0.75, Math.min(1.5, newSize))}rem`);
+            el.fontDec.disabled = state.fontSizeStep <= -3;
+            el.fontInc.disabled = state.fontSizeStep >= 5;
+            saveState();
+        }
+
+        function loadState() {
+            try {
+                const saved = JSON.parse(localStorage.getItem('rosaryStateDesktop'));
+                if (saved) {
+                    state.mode = saved.mode || 'rosary';
+                    state.mysteryKey = saved.mysteryKey || getTodaysMystery();
+                    state.step = saved.step || 0;
+                    state.litanyLang = saved.litanyLang || 'en';
+                    state.imagesVisible = saved.imagesVisible !== false;
+                    state.fontSizeStep = saved.fontSizeStep || 0;
+                } else {
+                    state.mysteryKey = getTodaysMystery();
+                }
+            } catch(e) { 
+                console.warn("Could not parse previous state, resetting defaults.");
+                state.mysteryKey = getTodaysMystery(); 
+            }
+            
+            el.toggleImages.checked = state.imagesVisible;
+            state.sequence = buildSequence(state.mysteryKey);
+        }
+
+        function saveState() {
+            try {
+                const toSave = {
+                    mode: state.mode, mysteryKey: state.mysteryKey, step: state.step,
+                    litanyLang: state.litanyLang, imagesVisible: state.imagesVisible, fontSizeStep: state.fontSizeStep
+                };
+                localStorage.setItem('rosaryStateDesktop', JSON.stringify(toSave));
+            } catch(e) {
+                console.warn("Storage API unavailable, progress not saved.");
+            }
+        }
+
+        // --- Event Listeners ---
+        
+        document.getElementById('btn-menu').addEventListener('click', toggleMenu);
+        el.menuOverlay.addEventListener('click', toggleMenu);
+        
+        document.querySelectorAll('.mystery-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                toggleMenu(); // Automatically checks ifMobile() inside
+                setTimeout(() => setMystery(e.target.dataset.mystery), 200);
+            });
+        });
+
+        document.getElementById('btn-litany').addEventListener('click', () => {
+            toggleMenu();
+            setTimeout(() => {
+                state.mode = 'litany';
+                switchView();
+            }, 200);
+        });
+
+        document.getElementById('btn-restart').addEventListener('click', () => {
+            toggleMenu();
+            setTimeout(() => setMystery(state.mode === 'litany' ? getTodaysMystery() : state.mysteryKey), 200);
+        });
+
+        el.btnNext.addEventListener('click', () => {
+            if (state.mode === 'rosary' && state.step < state.sequence.length) {
+                state.step++;
+                updateUI();
+            }
+        });
+
+        el.btnPrev.addEventListener('click', () => {
+            if (state.mode === 'rosary' && state.step > 0) {
+                state.step--;
+                updateUI();
+            }
+        });
+
+        el.litanyBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                state.litanyLang = e.target.dataset.lang;
+                updateUI();
+            });
+        });
+
+        el.fontInc.addEventListener('click', () => {
+            if (state.fontSizeStep < 5) { state.fontSizeStep++; applyFontSize(); }
+        });
+        el.fontDec.addEventListener('click', () => {
+            if (state.fontSizeStep > -3) { state.fontSizeStep--; applyFontSize(); }
+        });
+
+        el.toggleImages.addEventListener('change', (e) => {
+            state.imagesVisible = e.target.checked;
+            updateUI();
+        });
+
+        // External Link Handling (Auto-close menu on mobile)
+        document.getElementById('about-btn').addEventListener('click', toggleMenu);
+        document.getElementById('follow-btn').addEventListener('click', toggleMenu);
+
+        // Keyboard Navigation (Right/Left arrows to progress prayer)
+        document.addEventListener('keydown', (e) => {
+            // Prevent arrow navigation if mobile menu is open
+            if (isMobile() && el.menu.classList.contains('open')) return;
+            // Prevent arrow navigation during litany
+            if (state.mode === 'litany') return;
+
+            if (e.key === 'ArrowRight' && !el.btnNext.disabled) { e.preventDefault(); el.btnNext.click(); }
+            if (e.key === 'ArrowLeft' && !el.btnPrev.disabled) { e.preventDefault(); el.btnPrev.click(); }
+        });
+
+        // --- Boot Application ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initTracker();
+            loadState();
+            applyFontSize();
+            updateUI();
+        });
+    </script>
+</body>
+</html>
