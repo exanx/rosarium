@@ -1,0 +1,18 @@
+{
+  "name": "Rosarium App",
+  "short_name": "Rosarium",
+  "description": "A digital companion for praying the Holy Rosary.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#5c00ff",
+  "theme_color": "#07090f",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
